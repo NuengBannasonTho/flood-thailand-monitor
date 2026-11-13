@@ -1,0 +1,41 @@
+{
+  "name": "flood-thai",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@animate-ui/react": "^2.4.3",
+    "@fontsource/sarabun": "^5.3.0",
+    "@mapbox/vector-tile": "^2.0.5",
+    "maplibre-gl": "^5.24.1",
+    "motion": "^14.13.0",
+    "next": "^16.4.6",
+    "pbf": "^4.0.2",
+    "radix-ui": "^1.8.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "reicon-react": "^1.2.6",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.5",
+    "@types/geojson": "^7946.0.16",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@types/three": "^0.187.0",
+    "tailwindcss": "^4.3.5",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  },
+  "description": "จำลองน้ำท่วมบนแผนที่ 3 มิติของประเทศไทย พร้อมหาเส้นทางที่ยังไปได้",
+  "engines": {
+    "node": ">=20.9.0"
+  }
+}

@@ -1,0 +1,228 @@
+@import 'tailwindcss';
+
+/* Layout idea: the map of Thailand fills the screen. Controls float over it as separate soft
+   white cards with large corners; small near-black pieces sit against them for contrast.
+   Colour is kept for meaning: blue water, amber shallow, red closed. */
+@theme {
+  --font-sans: 'Sarabun', 'TH Sarabun New', 'Noto Sans Thai', 'Leelawadee UI', Tahoma, sans-serif;
+
+  --color-canvas: #f4f4f8;
+  --color-surface: #ffffff;
+  --color-soft: #f4f4f8;
+  --color-line: #e9e9f0;
+  --color-ink: #1b1c27;
+  --color-ink-soft: #2b2d3a;
+  --color-muted: #8a8c9c;
+  --color-water: #2f7fe0;
+  --color-water-soft: #e8f1fc;
+  --color-ok: #23ad74;
+  --color-warn: #f5a524;
+  --color-danger: #ef5350;
+
+  --radius-card: 30px;
+  --radius-tile: 20px;
+  --radius-control: 16px;
+
+  --shadow-float: 0 2px 6px rgb(27 28 39 / 0.04), 0 26px 50px -18px rgb(27 28 39 / 0.22);
+  --shadow-chip: 0 1px 2px rgb(27 28 39 / 0.06), 0 10px 22px -10px rgb(27 28 39 / 0.25);
+  --shadow-knob: 0 1px 2px rgb(27 28 39 / 0.14), 0 3px 10px rgb(27 28 39 / 0.14);
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+/* In the base layer so utilities such as outline-none can override it; unlayered CSS beats every Tailwind layer. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+}
+
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #d6d6e0 transparent;
+}
+
+/* ---- pieces the map engine places itself ---- */
+
+.map-pin {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  padding: 4px 12px 4px 4px;
+  border-radius: 999px;
+  background: var(--color-ink);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: var(--shadow-chip);
+}
+
+.map-pin b {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--color-ink);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* The place chosen from search: a white label on a stem down to the exact spot, so it reads apart from
+   the dark A/B pins. It sits beneath them and lets clicks through to the map. */
+.place-pin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+.place-pin-label {
+  max-width: 220px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: var(--shadow-chip);
+}
+
+.place-pin-stem {
+  position: relative;
+  width: 2px;
+  height: 28px;
+  margin-bottom: 4px;
+  background: var(--color-ink);
+}
+
+.place-pin-stem::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-ink);
+  box-shadow: 0 0 0 2.5px #fff;
+  transform: translate(-50%, 50%);
+}
+
+.map-pin,
+.via-pin,
+.step-dot,
+.vehicle-marker {
+  z-index: 1;
+}
+
+.map-pin {
+  cursor: grab;
+}
+
+/* A point the route only passes through, made by dragging the route: a ring, quieter than a lettered stop. */
+.via-pin {
+  width: 14px;
+  height: 14px;
+  border: 3px solid var(--color-ink);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--shadow-chip);
+  cursor: grab;
+}
+
+/* Under the pointer while it is over the route: grab here to bend the route. */
+.route-handle {
+  z-index: 2;
+  width: 14px;
+  height: 14px;
+  border: 3px solid var(--color-ink);
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 5px rgb(27 28 39 / 0.14);
+  pointer-events: none;
+}
+
+/* The step of the directions being looked at. */
+.step-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-ink);
+  box-shadow: 0 0 0 3px #fff, 0 0 0 3px rgb(27 28 39 / 0.3);
+  pointer-events: none;
+  animation: step-ring 1.4s ease-out 2;
+}
+
+@keyframes step-ring {
+  to {
+    box-shadow: 0 0 0 3px #fff, 0 0 0 18px rgb(27 28 39 / 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step-dot {
+    animation: none;
+  }
+}
+
+.vehicle-marker {
+  width: 132px;
+  height: 132px;
+  pointer-events: none;
+}
+
+.vehicle-marker canvas {
+  width: 100%;
+  height: 100%;
+  transform: scale(var(--vehicle-scale, 1));
+  transform-origin: center;
+}
+
+.maplibregl-ctrl-attrib {
+  font-family: var(--font-sans);
+  font-size: 11px;
+}
+
+.maplibregl-ctrl-bottom-right {
+  z-index: 1;
+}

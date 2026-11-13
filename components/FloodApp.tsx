@@ -625,6 +625,7 @@ export function FloodApp(): ReactElement {
             />
             <p className="px-2 pb-1 text-[11.5px] leading-relaxed text-muted max-lg:order-last lg:rounded-tile lg:bg-surface/90 lg:px-4 lg:py-3 lg:backdrop-blur-sm">
               แบบจำลองอย่างง่าย: น้ำล้นตลิ่งและน้ำทะเลหนุนแผ่จากแหล่งน้ำไปทุกจุดที่ต่ำกว่าผิวน้ำและน้ำไหลถึง ส่วนฝนตกหนักคือน้ำขังในแอ่งที่ไม่มีทางระบาย ไม่คิดอัตราการไหล ท่อระบายน้ำ เครื่องสูบ หรือคันกั้นน้ำที่เล็กกว่า 40 ม. ห้ามใช้ตัดสินใจในสถานการณ์จริง
+              {process.env.APP_VERSION ? <span className="mt-1 block tabular-nums">เวอร์ชัน {process.env.APP_VERSION}</span> : null}
             </p>
           </div>
 

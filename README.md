@@ -1,129 +1,195 @@
-# จำลองน้ำท่วมประเทศไทย
+# 🌊 flood-thai: stack and handover notes
 
-เว็บแอปแผนที่ 3 มิติของประเทศไทย: เลือกพื้นที่ เพิ่มระดับน้ำ ดูว่าน้ำท่วมถึงไหน ถนนสายไหนขาด
-แล้วหาเส้นทางที่พาหนะแต่ละแบบยังไปได้ พร้อมดูการเดินทางเป็น animation
+<p>
+  <img alt="Next.js 16" src="https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white">
+  <img alt="React 19" src="https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white">
+  <img alt="TypeScript 7" src="https://img.shields.io/badge/TypeScript-7-3178C6?logo=typescript&logoColor=white">
+  <img alt="MapLibre GL JS 5" src="https://img.shields.io/badge/MapLibre_GL_JS-5-396CB2?logo=maplibre&logoColor=white">
+  <img alt="three.js 0.187" src="https://img.shields.io/badge/three.js-0.187-000000?logo=threedotjs&logoColor=white">
+  <img alt="Tailwind CSS 4" src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white">
+  <img alt="Vitest 5" src="https://img.shields.io/badge/Vitest-5-6E9F18?logo=vitest&logoColor=white">
+  <img alt="No API keys" src="https://img.shields.io/badge/API_keys-none-2f7fe0">
+</p>
 
-## รัน
+![Water rising from the river and spreading across the area](docs/demo-flood.gif)
 
-ต้องมี Node.js 20.9 ขึ้นไป และต่ออินเทอร์เน็ต (แผนที่ ความสูง ถนน และชื่อสถานที่ดึงจากบริการออนไลน์)
+| Routes at a chosen water level | Trip playback |
+| --- | --- |
+| ![Routes avoiding flooded roads](docs/routes.png) | ![Vehicle following the route in 3D](docs/trip.png) |
+
+<sub>Captured in an automated browser test with synthetic terrain and roads, not real map data. The GIF is sped up.</sub>
+
+What you need to build, run and extend this flood-simulation web app: tools, libraries, data services, and the parts that are written by hand. Versions are the ones installed in this project.
+
+Thai version: `STACK.th.md`. Usage and model notes (Thai): `README.md`.
+
+## 🧰 1. Prerequisites
+
+| Item | Version | Purpose |
+| --- | --- | --- |
+| Node.js | 20.9 or newer (developed on 22) | Runs Next.js and all tooling |
+| npm | Ships with Node.js | Installs dependencies |
+| Browser with WebGL2 | Current Chrome, Edge, Firefox or Safari | Renders the map, the water and the 3D models |
+| Internet access | - | Map tiles, elevation, roads and place names are fetched live |
+
+Not needed: API keys, accounts with any service, a database, Docker.
 
 ```bash
-npm install
-npm run dev
+npm install         # install
+npm run dev         # development server at http://localhost:3000
+npm run build       # production build
+npm start           # serve the production build
+npm test            # unit tests for the simulation
+npm run typecheck
 ```
 
-เปิด http://localhost:3000
+## 📦 2. Libraries
 
-คำสั่งอื่น: `npm run build` แล้ว `npm start` สำหรับ production, `npm test` รันชุดทดสอบ, `npm run typecheck` ตรวจ type
+### Application framework
 
-## วิธีใช้
-
-1. ค้นหาเมือง หรือเลือกจากรายการเมืองที่เคยน้ำท่วมหนัก แผนที่จะบินไปและเริ่มจำลองให้เอง
-   (หรือซูมเข้าไปเองจนถึงระดับเมือง แล้วกด "จำลองน้ำท่วมพื้นที่นี้")
-2. เลือกสาเหตุน้ำท่วม (น้ำล้นตลิ่ง ฝนตกหนักในพื้นที่ หรือน้ำทะเลหนุน) แล้วเลื่อนแถบ น้ำจะแผ่เข้ามาเป็นคลื่นจนถึงระดับที่ตั้ง
-3. เลือกพาหนะ แล้วพิมพ์ชื่อจุดเริ่มต้นและปลายทาง (ค้นได้ทั้งประเทศ ถ้าอยู่นอกพื้นที่ที่จำลอง ระบบจะย้ายไปจำลองรอบ ๆ ให้)
-   หรือกดปุ่มหมุดแล้วคลิกบนแผนที่
-   - "เพิ่มจุดแวะ" ได้รวมไม่เกิน 10 จุด ลากวงกลมตัวอักษรหน้าแต่ละแถว (หรือโฟกัสแล้วกดลูกศรขึ้นลง) เพื่อสลับลำดับ ปุ่ม ⇅ กลับทิศทั้งเส้น
-   - ลากเส้นทางบนแผนที่ (ด้วยเมาส์) ไปยังถนนที่อยากให้ผ่าน จะได้ "จุดที่ผ่าน" เพิ่มในรายการ ลากหมุดเพื่อย้ายจุดได้
-   - เปิด "ขั้นตอนการเดินทาง" เพื่อดูการเลี้ยวทีละขั้นพร้อมความลึกน้ำแต่ละช่วง กดขั้นไหนแผนที่จะบินไปที่นั่น
-   - ปุ่มบุ๊กมาร์กบันทึกการเดินทาง (จุดทั้งหมดและพาหนะ) ไว้ในเบราว์เซอร์นี้ เปิดกลับมาได้จากการ์ด "การเดินทางที่บันทึกไว้"
-4. กด "ออกเดินทาง" เพื่อดู animation ระหว่างเล่นจะมีแค่ปุ่มกลมเล็ก ๆ ด้านล่าง (วงแหวนรอบปุ่มคือความคืบหน้า)
-   กดลูกศรข้างปุ่มเพื่อเปิด timeline เต็มสำหรับลากเลื่อนเวลา กด Space เพื่อเล่นหรือหยุด
-
-จุดสีบนไอคอนพาหนะบอกว่าพาหนะนั้นไปถึงปลายทางได้ (เขียว) หรือไม่ได้ (แดง) ที่ระดับน้ำปัจจุบัน
-
-## แหล่งข้อมูล
-
-ทุกบริการใช้ได้โดยไม่ต้องสมัครหรือใส่ API key แต่เป็นบริการสาธารณะที่มีข้อจำกัดการใช้งาน
-เหมาะกับการพัฒนาและใช้ส่วนตัว ถ้าจะเปิดให้คนจำนวนมากใช้ ควรตั้งเซิร์ฟเวอร์ของตัวเอง
-
-| ข้อมูล | บริการ | หมายเหตุ |
-| --- | --- | --- |
-| แผนที่ฐานและชื่อสถานที่บนแผนที่ | OpenFreeMap (ข้อมูล OpenStreetMap) | style `positron` |
-| ความสูงภูมิประเทศ | Terrain Tiles บน AWS Open Data | ไทล์แบบ Terrarium ละเอียดราว 37 ม. ต่อจุดที่ใช้คำนวณ |
-| ถนน | ไทล์เวกเตอร์ของ OpenFreeMap (z14) สำรองด้วย Overpass API | เรียกผ่าน `/api/roads` ของแอปเอง ประกอบโครงข่ายใหม่จากไทล์ (`lib/server/roadtiles.ts`) มี cache ในหน่วยความจำ |
-| ค้นหาสถานที่ | Nominatim และ Photon (ข้อมูล OpenStreetMap ทั้งคู่) | เรียกผ่าน `/api/geocode` ถามทั้งสองบริการพร้อมกันแล้วรวมผล ตัดรายการซ้ำ (`lib/server/search.ts`) Photon หาชื่อจากต้นคำได้ เช่น "เซ็นทรัล" ได้ทุกสาขา Nominatim จำกัด 1 คำขอต่อวินาที จึงค้นหาเมื่อกดค้นหาเท่านั้น |
-| ชื่อของจุดที่ปักบนแผนที่ | Nominatim | เรียกผ่าน `/api/reverse` |
-
-ตั้ง `CONTACT_EMAIL` ในไฟล์ `.env.local` เพื่อระบุตัวตนใน User-Agent ตามที่ Nominatim และ Overpass ขอ
-ทั้งสองบริการค้นหาใช้ข้อมูล OpenStreetMap จึงหาได้เฉพาะสถานที่ที่มีคนบันทึกไว้ใน OSM ร้านเล็ก ๆ หรือโครงการใหม่บางแห่งอาจยังไม่มี
-ดูตัวแปรทั้งหมดได้ใน `.env.example`
-
-## สาเหตุน้ำท่วมที่เลือกได้
-
-กรมอุตุนิยมวิทยาแบ่งลักษณะของอุทกภัยเป็น 3 แบบ (https://tmd.go.th/info/อุทกภัย) แอปนี้จำลองได้ 2 แบบ
-และแยกน้ำทะเลหนุนออกมาเป็นตัวเลือกของตัวเอง
-
-| ตัวเลือกในแอป | ตรงกับของกรมอุตุฯ | ค่าที่ปรับ | วิธีจำลอง |
+| Package | Version | Licence | Purpose |
 | --- | --- | --- | --- |
-| น้ำล้นตลิ่ง | น้ำล้นตลิ่ง | น้ำสูงขึ้นกี่เมตรจากระดับปกติของพื้นที่ | น้ำแผ่จากแม่น้ำหรือคลองหลักไปทุกจุดที่ต่ำกว่าผิวน้ำและน้ำไหลถึง |
-| ฝนตกหนักในพื้นที่ | น้ำท่วม หรือน้ำท่วมขัง | ปริมาณฝนสะสม 24 ชั่วโมง (มม.) | น้ำขังในแอ่งที่ไม่มีทางระบาย แอ่งเต็มจากจุดต่ำสุดขึ้นมา |
-| น้ำทะเลหนุน | สาเหตุหนึ่งของน้ำท่วมขังในพื้นที่ชายฝั่ง | ระดับน้ำทะเลสูงจากระดับทะเลปานกลาง (ม.) | น้ำแผ่จากทะเลเข้ามา เลือกได้เฉพาะพื้นที่ที่ติดทะเล |
-| น้ำป่าไหลหลาก (เลือกไม่ได้) | น้ำป่าไหลหลาก หรือน้ำท่วมฉับพลัน | - | ต้องใช้แบบจำลองการไหลของน้ำ ยังไม่รองรับ |
+| `next` | 16.4.6 | MIT | App Router pages, plus API routes that proxy the data services |
+| `react`, `react-dom` | 19.3.1 | MIT | UI |
+| `typescript` | 7.0.2 | Apache-2.0 | Strict mode across the project; no `any`, no unsafe casts |
 
-ป้ายสถานะในโหมดฝนใช้เกณฑ์ฝน 24 ชั่วโมงของกรมอุตุนิยมวิทยา: ฝนเล็กน้อย 0.1 ถึง 10.0 มม.,
-ฝนปานกลาง 10.1 ถึง 35.0 มม., ฝนหนัก 35.1 ถึง 90.0 มม., ฝนหนักมาก 90.1 มม. ขึ้นไป
+### Map and 3D
 
-## แบบจำลองทำอะไร และไม่ทำอะไร
+| Package | Version | Licence | Purpose |
+| --- | --- | --- | --- |
+| `maplibre-gl` | 5.24.1 | BSD-3-Clause | Base map, 3D terrain, camera, and custom layers for water and lines |
+| `three` | 0.187.0 | MIT | 3D vehicle models (car, pickup, truck, motorbike, long-tail boat) |
 
-- ระดับฐานของพื้นที่คือความสูงเปอร์เซ็นไทล์ที่ 1 ของพื้นที่ที่จำลอง ซึ่งในทางปฏิบัติคือแม่น้ำ คลอง หรือทะเล
-- น้ำล้นตลิ่งและน้ำทะเลหนุน: ผิวน้ำเป็นระนาบเดียวทั้งพื้นที่ ที่ลุ่มที่มีที่สูงกั้นจะไม่ท่วมจนกว่าน้ำจะสูงกว่าสันที่กั้น
-  ไม่คิดความลาดของแม่น้ำหรืออัตราการไหล
-- ฝนตกหนัก: สมมติว่าแต่ละแอ่งรับน้ำจากพื้นที่ 6 เท่าของตัวแอ่ง และไม่มีน้ำซึมลงดิน ท่อระบายน้ำ หรือเครื่องสูบ
-  ทั้งสองข้อเป็นการประมาณอย่างหยาบ ในเมืองจริงระบบระบายน้ำมีผลมาก
-- คลื่นที่เห็นตอนน้ำแผ่เข้ามาเป็นการแสดงลำดับที่น้ำไปถึงแต่ละจุด ไม่ใช่ความเร็วจริงของน้ำ
-- ข้อมูลความสูงละเอียดราว 37 ม. ต่อจุด คันกั้นน้ำหรือกำแพงที่แคบกว่านั้นจะไม่ถูกเห็น
-- ข้อมูลความสูงมาจากดาวเทียม ในเมืองที่ราบมาก เช่น กรุงเทพฯ ความคลาดเคลื่อนของข้อมูลอาจมากกว่าระดับน้ำที่ตั้ง
-- สะพานถือว่าอยู่เหนือน้ำเสมอ ส่วนถนนอื่นถือว่าอยู่ระดับพื้นดิน
-- ความลึกที่พาหนะลุยได้ (20, 30, 50, 80 ซม.) และน้ำลึกขั้นต่ำของเรือ (40 ซม.) เป็นค่าประมาณ
-- เส้นทางหาได้ภายในกรอบพื้นที่ที่จำลองเท่านั้น (สูงสุด 20 × 14 กม.) น้ำคำนวณจากไทล์ความสูงทั้งแผ่นที่คลุมกรอบ (เพราะน้ำไหลมาจากแม่น้ำนอกกรอบได้) แต่แสดงและนับพื้นที่เฉพาะในกรอบ
+MapLibre 5 was chosen over 6 because version 6 needs extra worker-file setup when used with a bundler.
 
-ใช้เพื่อสำรวจและทำความเข้าใจเท่านั้น ห้ามใช้ตัดสินใจในสถานการณ์น้ำท่วมจริง
+### UI and motion
 
-## ความเร็ว
+| Package | Version | Licence | Purpose |
+| --- | --- | --- | --- |
+| `tailwindcss` + `@tailwindcss/postcss` | 4.3.5 | MIT | All styling; colour, radius and shadow tokens live in `app/globals.css` |
+| `@animate-ui/react` | 2.4.3 | MIT + Commons Clause | Buttons, tooltips, slider, sliding numbers |
+| `motion` | 14.13.0 | MIT | UI animation (used by animate-ui) |
+| `radix-ui` | 1.8.1 | MIT | Accessible component behaviour |
+| `reicon-react` | 1.2.6 | MIT | Icons (reicon.dev) |
+| `@fontsource-variable/anuphan` | 5.3.0 | OFL-1.1 | Thai typeface, bundled locally rather than loaded from a CDN |
 
-- น้ำท่วมวาดด้วย shader ในบริบท WebGL ของแผนที่เอง (`lib/map/water-layer.ts`) เป็น custom layer หนึ่งชั้น
-  ทั้งระดับน้ำ แนวน้ำที่แผ่เข้ามา และชั้นคลื่นที่ม้วนเข้าหาขอบ เป็นแค่ตัวเลขที่ส่งให้ shader ต่อเฟรม
-  ไม่มีการคำนวณพื้นที่น้ำท่วมใหม่บน CPU
-- ถนนที่ท่วมและเส้นทางก็วาดเป็น custom layer เช่นกัน (`lib/map/line-layer.ts`) ไม่ใช่ line layer ปกติของแผนที่
-  เหตุผล: เมื่อเปิดภูมิประเทศ 3 มิติ MapLibre จะอบ fill/line/raster ลง texture ของแต่ละ tile แล้วเก็บไว้ใช้ข้ามเฟรม
-  แต่เก็บได้ก็ต่อเมื่อ layer พวกนั้นเรียงติดกันทั้งหมด ถ้ามี layer ชนิดอื่น (เช่น ชั้นน้ำ หรือป้ายชื่อ) คั่นกลาง
-  แผนที่จะวาด tile ภูมิประเทศใหม่ทุก tile ทุกเฟรม ซึ่งเป็นสาเหตุของอาการกระตุก
-  ด้วยเหตุเดียวกัน ตอนโหลด style แอปจะย้ายป้ายชื่อและ layer ที่ไม่ถูกอบขึ้นไปไว้บนสุด (`raiseOverlays` ใน `lib/map/controller.ts`)
-- การคำนวณหนักทำครั้งเดียวต่อพื้นที่และสาเหตุ (`buildField` ใน `lib/sim/flood.ts`) แล้วเก็บไว้
-- สถานะถนนคำนวณใหม่อย่างมากทุก 420 มิลลิวินาที ส่วนเส้นทางคำนวณเมื่อระดับน้ำหยุดขยับแล้ว 240 มิลลิวินาที ไม่ใช่ทุกเฟรม
-- ขณะมีน้ำบนจอ แผนที่จะวาดใหม่ทุกเฟรมเพื่อให้คลื่นเคลื่อนไหว ถ้าระบบตั้งค่า "ลดการเคลื่อนไหว" ไว้ คลื่นจะนิ่งและวาดเฉพาะตอนระดับน้ำเปลี่ยน
-- ถ้าเครื่องยังช้า ปิดภูมิประเทศ 3 มิติได้จากปุ่มรูปลูกบาศก์ที่แถบซ้าย น้ำท่วมและเส้นทางทำงานเหมือนเดิม
+Licence note: the Commons Clause on animate-ui forbids reselling the library itself. Using it inside your own site is allowed, but read its LICENSE file before commercial use.
 
-## สิ่งที่ทดสอบแล้ว และยังไม่ได้ทดสอบ
+### Development
 
-ทดสอบแล้ว:
+| Package | Version | Purpose |
+| --- | --- | --- |
+| `vitest` | 5.1.0 | Unit tests for flooding and routing (`tests/sim.test.ts`) |
+| `@types/node`, `@types/react`, `@types/react-dom`, `@types/three`, `@types/geojson` | - | Type definitions |
 
-- ชุดทดสอบอัตโนมัติของตัวคำนวณ (`npm test`): ถอดรหัสความสูง น้ำล้นตลิ่ง น้ำทะเลหนุน น้ำขังจากฝน ลำดับการแผ่ของน้ำ การสร้างโครงข่ายถนน การหาเส้นทางตามพาหนะ
-- `npm run build` ผ่าน
-- เปิดแอปใน Chrome แบบ headless แล้วไล่ขั้นตอนทั้งหมด (ค้นหา จำลอง ปักจุด หาเส้นทาง เล่น animation) โดยใช้ข้อมูลจำลองแทนบริการจริง
+## 🛰️ 3. Data services (free, no sign-up)
 
-ยังไม่ได้ทดสอบ: การเรียกบริการจริงทั้งสี่ตัว เพราะสภาพแวดล้อมที่ใช้พัฒนาต่ออินเทอร์เน็ตไปยังบริการเหล่านั้นไม่ได้
-และอัตราเฟรมบนการ์ดจอจริง: Chrome ที่ใช้ทดสอบวาดด้วยซอฟต์แวร์ จึงวัดได้เพียงว่าแผนที่ไม่วาด tile ภูมิประเทศซ้ำระหว่างที่น้ำเคลื่อนไหว (จากเดิม 2 รอบต่อ tile ต่อเฟรม เหลือ 0)
-การย้ายป้ายชื่อขึ้นบนสุดก็ยังไม่ได้ลองกับ style จริงของ OpenFreeMap
-ถ้ารันครั้งแรกแล้วแผนที่ไม่ขึ้น ถนนโหลดไม่ได้ หรือชื่อภาษาไทยบนแผนที่ไม่แสดง ให้ดูข้อความแจ้งเตือนบนหน้าจอและ console ของเบราว์เซอร์
+| Service | Provides | Called from | Conditions |
+| --- | --- | --- | --- |
+| OpenFreeMap (`positron` style) | Base map and place names for the whole country | Browser | Show OpenStreetMap attribution |
+| AWS Terrain Tiles (Terrarium PNG) | Ground elevation, used for both 3D terrain and the flood model | Browser, with `/api/dem` as a same-origin fallback | Show data-source attribution |
+| Overpass API | Road network from OpenStreetMap | Server, `/api/roads` | Fair use; identify yourself with a User-Agent |
+| Nominatim | Place search and reverse geocoding | Server, `/api/geocode`, `/api/reverse` | At most 1 request per second; User-Agent required; no search-as-you-type |
 
-## โครงสร้าง
+The app already follows these: search fires on submit only, upstream calls are throttled and cached, and attribution is shown on the map.
 
+All four are public services with no availability guarantee. They suit personal use and prototypes. For a site with real traffic, self-host or use a paid provider and point the app at it with the variables below. Check each service's current usage policy before going live; the conditions above were checked when the app was built, not re-verified since.
+
+Elevation decoding: `elevation = R * 256 + G + B / 256 - 32768` (metres).
+
+### Environment variables (all optional)
+
+| Variable | Purpose |
+| --- | --- |
+| `CONTACT_EMAIL` | Added to the User-Agent sent to Nominatim and Overpass |
+| `OVERPASS_URL` | Alternative Overpass server |
+| `NOMINATIM_URL` | Alternative Nominatim server |
+| `NEXT_PUBLIC_MAP_STYLE_URL` | Alternative base-map style |
+| `NEXT_PUBLIC_DEM_TILE_URL` | Alternative elevation tile source |
+
+Copy `.env.example` to `.env.local` and fill in what you need.
+
+## ✍️ 4. Hand-written parts
+
+| Part | Files | What it does |
+| --- | --- | --- |
+| Flood model | `lib/sim/flood.ts`, `lib/sim/dem.ts` | Loads elevation into a grid, finds the area's base level, and precomputes when each cell gets wet for each cause |
+| Flood causes | `lib/sim/modes.ts` | Ranges, units and presets for river overflow, heavy local rain and sea surge, with Thai Meteorological Department rain classes |
+| Road graph and routing | `lib/sim/roads.ts`, `lib/sim/vehicles.ts` | Dijkstra with per-vehicle wading limits; up to 3 alternative routes |
+| Water layer | `lib/map/water-layer.ts` | GLSL shader that draws the water as moving layered bands |
+| Line layer | `lib/map/line-layer.ts` | Draws flooded roads and routes above the water |
+| Shared GL helpers | `lib/map/gl.ts` | Shader compilation, coordinate frame, elevation sampling |
+| Map controller | `lib/map/controller.ts` | Owns the MapLibre map, layers, pins, vehicle marker and trip playback |
+| Trip sequence | `lib/map/sequence.ts`, `components/Timeline.tsx` | Keyframed camera tracks and the collapsible timeline |
+| Vehicle models | `lib/three/models.ts`, `lib/three/vehicle-view.ts` | Models built in code from primitives; no external model files |
+| Service proxies | `lib/server/*`, `app/api/*` | Throttling, caching, and compacting road data before it reaches the browser |
+| UI | `components/*`, `components/ui/kit.tsx` | Cards, panels and shared primitives |
+
+## 🧩 5. How it fits together
+
+1. The user searches or pans to a place. `FloodApp.tsx` asks the controller for the analysis box (at most about 10 x 7 km).
+2. `loadDem` fetches elevation tiles at zoom 12 (about 37 m per cell) into one grid. `/api/roads` returns the road network for the same box.
+3. `buildField` runs once per area and cause. It stores, per cell, the water level at which the cell floods and the order in which water reaches it.
+4. Moving the slider only changes numbers passed to the shader. Nothing is recomputed on the CPU for the water itself.
+5. Road status is recomputed at most every 420 ms. Routes are recomputed 240 ms after the level stops moving.
+6. A trip is a set of keyframed camera tracks evaluated per frame; the vehicle is an HTML marker holding a small three.js canvas.
+
+### ⚠️ Rendering rule you must keep
+
+With 3D terrain on, MapLibre bakes background, fill, line, raster and hillshade layers into one texture per terrain tile and reuses it between frames. It can only do that while all such layers are adjacent in the layer order. If any other layer type (custom, symbol, fill-extrusion) sits between two of them, every terrain tile is redrawn on every frame and the map stutters.
+
+This is why:
+
+- water and route lines are custom layers placed above all baked layers, not ordinary line or raster layers;
+- `raiseOverlays` in `controller.ts` moves the base style's labels to the top on load.
+
+If you add a layer, either keep it inside the baked group (before `fs-water`) or draw it in a custom layer above it. This was measured in a headless browser: 2 redraws per tile per frame when the group was split, 0 when it was not.
+
+Related: create WebGL resources inside a custom layer's `render`, not `onAdd`. MapLibre resets its GL state tracking after `render` only.
+
+## 🚀 6. Starting a similar project from scratch
+
+```bash
+npx create-next-app@latest my-flood-map --typescript --tailwind --app
+cd my-flood-map
+npm install maplibre-gl three @animate-ui/react motion radix-ui reicon-react @fontsource-variable/anuphan
+npm install -D vitest @types/three @types/geojson
 ```
-app/                 หน้าเว็บและ API routes (roads, geocode, reverse, dem)
-components/          ส่วนติดต่อผู้ใช้ (React)
-  ui/kit.tsx         ปุ่ม การ์ด แถบเลื่อน สร้างบน animate-ui
-lib/sim/             ตัวคำนวณ ไม่ผูกกับ DOM: dem, flood, roads, vehicles
-lib/map/             ตัวควบคุม MapLibre และลำดับภาพการเดินทาง
-lib/three/           โมเดลพาหนะ 3 มิติ (สร้างด้วยโค้ด) และตัววาด
-lib/server/          ตัวดึงถนนจากไทล์ (สำรองด้วย Overpass) และการค้นหาสถานที่ (Nominatim + Photon) ฝั่งเซิร์ฟเวอร์
-tests/               ชุดทดสอบ (Vitest)
-```
 
-## License ของส่วนประกอบ
+Suggested order:
 
-- animate-ui: MIT พร้อม Commons Clause (ใช้ในแอปได้ ห้ามนำ component ไปขายต่อในรูปเดิม)
-- reicon, MapLibre GL JS, three.js, Next.js: โอเพนซอร์ส ดู license ของแต่ละแพ็กเกจ
-- ฟอนต์ Sarabun (Cadson Demak ผ่าน Fontsource): SIL Open Font License 1.1
-- ข้อมูลแผนที่: © OpenStreetMap contributors (ODbL) ต้องแสดงที่มา ซึ่งแอปแสดงไว้ที่มุมขวาล่างของแผนที่แล้ว
+1. Show a MapLibre map with the OpenFreeMap style and terrain from AWS Terrain Tiles.
+2. Load elevation for the viewed area into a grid; write the flood model with tests.
+3. Draw the water as a custom layer.
+4. Fetch roads from Overpass through an API route; write the router.
+5. Add place search with Nominatim through an API route.
+6. Add the trip animation and vehicle models.
+7. Polish the UI.
+
+## 🚧 7. Known limits and open work
+
+Model limits:
+
+- River and sea modes use one flat water surface per area. No flow rate, river slope, drains or pumps.
+- Rain mode assumes each basin collects from 6 times its own area with no infiltration. This is a rough estimate.
+- Flash floods are listed in the UI but not modelled.
+- Elevation is about 37 m per cell, so narrow levees and walls are invisible. In very flat cities such as Bangkok, elevation error can exceed the water level being tested.
+- Bridges are always treated as dry; all other roads sit at ground level.
+- Wading limits (0.2, 0.3, 0.5, 0.8 m) and the boat's minimum depth (0.4 m) are estimates.
+- Routing only works inside the analysed box.
+
+Not for real flood decisions. It is an exploration tool.
+
+Not yet verified:
+
+- Calls to the four live services. The development environment could not reach them, so end-to-end tests ran against stand-in data only.
+- Frame rate on a real GPU. Tests used software rendering.
+- Label reordering against the real OpenFreeMap style.
+
+Ideas for whoever continues:
+
+- Real-time data: river gauge levels, rainfall radar or satellite flood extents. Most sources require an access agreement.
+- A hydrodynamic model, or at least river slope, in place of the flat surface.
+- Higher-resolution elevation for flat urban areas.
+- Depth testing for the custom layers, so water and lines are hidden behind ridges in mountainous areas.
+- Tests for the map layers; only the simulation is unit-tested today.
